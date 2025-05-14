@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - FlowTracer{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="jumbotron">
+        <h1 class="display-4">Welcome to FlowTracer</h1>
+        <p class="lead">A comprehensive application for tracking, tracing, and executing system workflows.</p>
+        <hr class="my-4">
+        <p>FlowTracer helps you define, manage, and recover application flows with a user-friendly interface.</p>
+        
+        {% if user.is_authenticated %}
+        <div class="mt-4">
+            <a href="{% url 'workflow:list' %}" class="btn btn-primary btn-lg">My Workflows</a>
+            <a href="{% url 'workflow:create' %}" class="btn btn-success btn-lg ml-2">Create New Workflow</a>
+        </div>
+        {% else %}
+        <div class="mt-4">
+            <a href="{% url 'authentication:login' %}" class="btn btn-primary btn-lg">Sign In</a>
+            <a href="{% url 'authentication:register' %}" class="btn btn-success btn-lg ml-2">Register</a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Define Workflows</h5>
+                    <p class="card-text">Create comprehensive application workflows with components and connections.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Trace Issues</h5>
+                    <p class="card-text">Track and trace application flows to identify and resolve issues quickly.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Execute & Recover</h5>
+                    <p class="card-text">Run workflows and sub-workflows with customizable retry strategies.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

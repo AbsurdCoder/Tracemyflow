@@ -1,0 +1,41 @@
+workflow:
+  id: e9c63c3c-7051-46c3-90a2-a8c1386b7201
+  name: Chirag
+  description: ''
+  created_by: cb
+  validation_mode: required
+  components:
+  - id: '1'
+    name: Roter
+    type: api
+    order: 1
+    config:
+      api_url: https://api.example.com/v1
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer TOKEN
+  - id: '2'
+    name: xformer
+    type: api
+    order: 2
+    config:
+      api_url: https://api.example.com/v1
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer TOKEN
+  connections:
+  - id: '1'
+    type: kafka_to_mq
+    source:
+      id: '1'
+      name: Roter
+    target:
+      id: '2'
+      name: xformer
+    config:
+      source_topic: source-topic
+      target_queue: target-queue
+      message_filter: .*
+      transform_script: ''

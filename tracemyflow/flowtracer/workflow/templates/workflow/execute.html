@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Execute Workflow - {{ workflow.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Execute Workflow: {{ workflow.name }}</h3>
+                    <div>
+                        <a href="{% url 'workflow:edit' workflow_id=workflow.id %}" class="btn btn-primary">
+                            <i class="fas fa-edit mr-1"></i> Edit Workflow
+                        </a>
+                        <a href="{% url 'workflow:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left mr-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4>Workflow Details</h4>
+                            <dl class="row">
+                                <dt class="col-sm-3">Name:</dt>
+                                <dd class="col-sm-9">{{ workflow.name }}</dd>
+                                
+                                <dt class="col-sm-3">Description:</dt>
+                                <dd class="col-sm-9">{{ workflow.description|default:"No description" }}</dd>
+                                
+                                <dt class="col-sm-3">Components:</dt>
+                                <dd class="col-sm-9">{{ components|length }}</dd>
+                                
+                                <dt class="col-sm-3">Connections:</dt>
+                                <dd class="col-sm-9">{{ connections|length }}</dd>
+                                
+                                <dt class="col-sm-3">Validation Mode:</dt>
+                                <dd class="col-sm-9">{{ workflow.get_validation_mode_display }}</dd>
+                                
+                                <dt class="col-sm-3">Last Modified:</dt>
+                                <dd class="col-sm-9">{{ workflow.updated_at|date:"F j, Y, g:i a" }}</dd>
+                            </dl>
+                            
+                            <h4 class="mt-4">Execute Workflow</h4>
+                            <form method="post" action="{% url 'workflow:execute' workflow_id=workflow.id %}">
+                                {% csrf_token %}
+                                
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        {{ form.validation_enabled }}
+                                        <label class="custom-control-label" for="{{ form.validation_enabled.id_for_label }}">
+                                            Enable Validation
+                                        </label>
+                                        <small class="form-text text-muted">{{ form.validation_enabled.help_text }}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-play-circle mr-1"></i> Execute Workflow
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Recent Executions</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if recent_executions %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for execution in recent_executions %}
+                                        <li class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>
+                                                    <a href="{% url 'workflow:execution_detail' execution_id=execution.id %}">
+                                                        {{ execution.started_at|date:"M d, Y H:i" }}
+                                                    </a>
+                                                </span>
+                                                <span class="badge {% if execution.status == 'completed' %}badge-success{% elif execution.status == 'running' %}badge-primary{% elif execution.status == 'failed' %}badge-danger{% elif execution.status == 'partially_completed' %}badge-warning{% else %}badge-secondary{% endif %}">
+                                                    {{ execution.get_status_display }}
+                                                </span>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <div class="text-center p-3">
+                                        <p class="text-muted mb-0">No recent executions</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4>Component Overview</h4>
+                        <div class="row">
+                            {% for component in components %}
+                            <div class="col-md-3 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-{% if component.component_type == 'kafka' %}warning{% elif component.component_type == 'mq' %}info{% elif component.component_type == 'db' %}success{% elif component.component_type == 'service' %}primary{% else %}secondary{% endif %} text-white">
+                                        <h5 class="mb-0">{{ component.name }}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <strong>Type:</strong> {{ component.get_component_type_display }}<br>
+                                            <strong>Order:</strong> {{ component.order }}
+                                        </p>
+                                        
+                                        {% with retry=component.retry_strategies.first %}
+                                        {% if retry %}
+                                        <div class="mt-2">
+                                            <span class="badge badge-primary">
+                                                {{ retry.get_strategy_type_display }} Retry
+                                            </span>
+                                            <small>(Max: {{ retry.max_retries }})</small>
+                                        </div>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

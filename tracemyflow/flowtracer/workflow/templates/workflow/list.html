@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Workflows - FlowTracer{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Workflows</h1>
+        <a href="{% url 'workflow:create' %}" class="btn btn-success">
+            <i class="fas fa-plus-circle mr-1"></i> Create Workflow
+        </a>
+    </div>
+    
+    {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Created</th>
+                        <th>Modified</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for workflow in page_obj %}
+                    <tr>
+                        <td>{{ workflow.name }}</td>
+                        <td>{{ workflow.description|truncatechars:50 }}</td>
+                        <td>{{ workflow.created_at|date:"M d, Y" }}</td>
+                        <td>{{ workflow.updated_at|date:"M d, Y" }}</td>
+                        <td>
+                            {% if workflow.is_active %}
+                                <span class="badge badge-success">Active</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'workflow:edit' workflow_id=workflow.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{% if workflow.id %}{% url 'workflow:execute' workflow_id=workflow.id %}{% else %}#{% endif %}" class="btn btn-sm btn-info{% if not workflow.id %} disabled{% endif %}">
+                                    <i class="fas fa-play"></i> Execute
+                                </a>
+                                <a href="{% url 'workflow:download_yaml' workflow_id=workflow.id %}" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-download"></i> YAML
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Workflows pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">&laquo; First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo; First</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">Last &raquo;</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="text-muted">You don't have any workflows yet</h3>
+                <p>Get started by creating your first workflow</p>
+                <a href="{% url 'workflow:create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle mr-1"></i> Create Workflow
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Workflow - FlowTracer{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>Create New Workflow</h2>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">Workflow Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Description</label>
+                    <textarea name="description" rows="3" class="form-control" id="{{ form.description.id_for_label }}">{{ form.description.value|default:'' }}</textarea>
+                    {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.validation_mode.id_for_label }}">Validation Mode</label>
+                    {{ form.validation_mode }}
+                    <small class="form-text text-muted">
+                        <b>Required</b>: Workflow will fail if validation fails<br>
+                        <b>Optional</b>: Validation issues will be logged but workflow continues<br>
+                        <b>None</b>: No validation performed
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="{{ form.is_active.id_for_label }}" name="is_active" checked>
+                        <label class="custom-control-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save mr-1"></i> Create Workflow
+                    </button>
+                    <a href="{% url 'workflow:list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times mr-1"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

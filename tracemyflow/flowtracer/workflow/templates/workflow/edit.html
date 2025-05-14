@@ -1,0 +1,786 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Workflow - {{ workflow.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/workflow_builder.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Edit Workflow: {{ workflow.name }}</h3>
+                    <div>
+                        <a href="{% if workflow.id %}{% url 'workflow:execute' workflow_id=workflow.id %}{% else %}#{% endif %}" class="btn btn-primary{% if not workflow.id %} disabled{% endif %}">
+                            <i class="fas fa-play mr-1"></i> Execute
+                        </a>
+                        <a href="{% url 'workflow:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left mr-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="workflowTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="details-tab" data-toggle="tab" href="#details" role="tab">
+                                <i class="fas fa-info-circle mr-1"></i> Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="components-tab" data-toggle="tab" href="#components" role="tab">
+                                <i class="fas fa-cube mr-1"></i> Components
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="connections-tab" data-toggle="tab" href="#connections" role="tab">
+                                <i class="fas fa-link mr-1"></i> Connections
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="visual-tab" data-toggle="tab" href="#visual" role="tab">
+                                <i class="fas fa-project-diagram mr-1"></i> Visual Editor
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="yaml-tab" data-toggle="tab" href="#yaml" role="tab">
+                                <i class="fas fa-code mr-1"></i> YAML
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content p-3 border border-top-0 rounded-bottom" id="workflowTabsContent">
+                        <!-- Details Tab -->
+                        <div class="tab-pane fade show active" id="details" role="tabpanel">
+                            <form method="post" action="{% url 'workflow:edit' workflow_id=workflow.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="update_workflow" value="1">
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.name.id_for_label }}">Workflow Name</label>
+                                    {{ form.name }}
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.description.id_for_label }}">Description</label>
+                                    {{ form.description }}
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.validation_mode.id_for_label }}">Validation Mode</label>
+                                    {{ form.validation_mode }}
+                                    <small class="form-text text-muted">
+                                        <b>Required</b>: Workflow will fail if validation fails<br>
+                                        <b>Optional</b>: Validation issues will be logged but workflow continues<br>
+                                        <b>None</b>: No validation performed
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="{{ form.is_active.id_for_label }}" name="is_active" {% if workflow.is_active %}checked{% endif %}>
+                                        <label class="custom-control-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save mr-1"></i> Update Workflow
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Components Tab -->
+                        <div class="tab-pane fade" id="components" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Workflow Components</h4>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#addComponentModal">
+                                    <i class="fas fa-plus-circle mr-1"></i> Add Component
+                                </button>
+                            </div>
+                            
+                            {% if components %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Order</th>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Retry Strategy</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for component in components %}
+                                        <tr>
+                                            <td>{{ component.order }}</td>
+                                            <td>{{ component.name }}</td>
+                                            <td>
+                                                <span class="badge {% if component.component_type == 'kafka' %}badge-warning{% elif component.component_type == 'mq' %}badge-info{% elif component.component_type == 'db' %}badge-success{% elif component.component_type == 'service' %}badge-primary{% else %}badge-secondary{% endif %}">
+                                                    {{ component.get_component_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% with retry=component.retry_strategies.first %}
+                                                    {% if retry %}
+                                                        <span class="badge badge-primary">{{ retry.get_strategy_type_display }}</span>
+                                                        <small>Max: {{ retry.max_retries }}</small>
+                                                    {% else %}
+                                                        <span class="badge badge-secondary">None</span>
+                                                        <a href="#" class="btn btn-sm btn-link add-retry" data-component-id="{{ component.id }}" data-toggle="modal" data-target="#addRetryStrategyModal">
+                                                            <small>Add</small>
+                                                        </a>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-sm btn-primary edit-component" data-component-id="{{ component.id }}" data-toggle="modal" data-target="#editComponentModal">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-danger delete-component" data-component-id="{{ component.id }}" data-component-name="{{ component.name }}" data-toggle="modal" data-target="#deleteComponentModal">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-1"></i> No components added yet. Use the "Add Component" button to create your first component.
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Connections Tab -->
+                        <div class="tab-pane fade" id="connections" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Workflow Connections</h4>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#addConnectionModal" {% if components|length < 2 %}disabled{% endif %}>
+                                    <i class="fas fa-plus-circle mr-1"></i> Add Connection
+                                </button>
+                            </div>
+                            
+                            {% if connections %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Source</th>
+                                            <th>Target</th>
+                                            <th>Type</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for connection in connections %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge {% if connection.source.component_type == 'kafka' %}badge-warning{% elif connection.source.component_type == 'mq' %}badge-info{% else %}badge-secondary{% endif %}">
+                                                    {{ connection.source.component_type }}
+                                                </span>
+                                                {{ connection.source.name }}
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if connection.target.component_type == 'kafka' %}badge-warning{% elif connection.target.component_type == 'mq' %}badge-info{% else %}badge-secondary{% endif %}">
+                                                    {{ connection.target.component_type }}
+                                                </span>
+                                                {{ connection.target.name }}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-primary">{{ connection.get_connection_type_display }}</span>
+                                            </td>
+                                            <td>
+                                                <form method="post" action="{% url 'workflow:delete_connection' connection_id=connection.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this connection?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-1"></i> No connections added yet. Use the "Add Connection" button to create your first connection.
+                                {% if components|length < 2 %}
+                                <br><small class="text-muted">Note: You need at least two components to create a connection.</small>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Visual Editor Tab -->
+                        <div class="tab-pane fade" id="visual" role="tabpanel">
+                            <div class="mb-3">
+                                <h4>Visual Workflow Editor</h4>
+                                <p class="text-muted">Drag components to arrange them, click connections to edit.</p>
+                            </div>
+                            
+                            <div id="workflow-diagram" class="workflow-container">
+                                <!-- Diagram will be rendered here by JS -->
+                                <div class="d-flex justify-content-center align-items-center h-100">
+                                    <div class="text-center p-4">
+                                        <i class="fas fa-project-diagram fa-4x text-muted mb-3"></i>
+                                        <h5>Building diagram...</h5>
+                                        <p class="text-muted">If the diagram doesn't appear, you may need to add components and connections first.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- YAML Tab -->
+                        <div class="tab-pane fade" id="yaml" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">YAML Definition</h4>
+                                <div>
+                                    <a href="{% url 'workflow:download_yaml' workflow_id=workflow.id %}" class="btn btn-info">
+                                        <i class="fas fa-download mr-1"></i> Download YAML
+                                    </a>
+                                    <button type="button" class="btn btn-secondary ml-2" data-toggle="modal" data-target="#uploadYamlModal">
+                                        <i class="fas fa-upload mr-1"></i> Upload YAML
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="yaml-viewer">
+                                <pre id="yaml-content" class="p-3 bg-light border rounded">Loading YAML definition...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Component Modal -->
+<div class="modal fade" id="addComponentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Component</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{% url 'workflow:add_component' workflow_id=workflow.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="id_name">Component Name</label>
+                        <input type="text" name="name" class="form-control" id="id_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_component_type">Component Type</label>
+                        <select name="component_type" class="form-control" id="id_component_type" required>
+                            <option value="">--- Select Type ---</option>
+                            <option value="kafka">Kafka</option>
+                            <option value="mq">Message Queue</option>
+                            <option value="db">Database</option>
+                            <option value="service">Service</option>
+                            <option value="api">API</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_order">Order</label>
+                        <input type="number" name="order" class="form-control" id="id_order" min="1" value="{{ components|length|add:1 }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_config">Configuration (JSON)</label>
+                        <textarea name="config" rows="5" class="form-control" id="id_config" placeholder="{}">{}</textarea>
+                        <small class="form-text text-muted">Enter component configuration in JSON format.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Component</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Component Modal -->
+<div class="modal fade" id="editComponentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Component</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" id="edit-component-form" action="">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_id_name">Component Name</label>
+                        <input type="text" name="name" class="form-control" id="edit_id_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_id_component_type">Component Type</label>
+                        <select name="component_type" class="form-control" id="edit_id_component_type" required>
+                            <option value="kafka">Kafka</option>
+                            <option value="mq">Message Queue</option>
+                            <option value="db">Database</option>
+                            <option value="service">Service</option>
+                            <option value="api">API</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_id_order">Order</label>
+                        <input type="number" name="order" class="form-control" id="edit_id_order" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_id_config">Configuration (JSON)</label>
+                        <textarea name="config" rows="5" class="form-control" id="edit_id_config"></textarea>
+                        <small class="form-text text-muted">Enter component configuration in JSON format.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Component</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Component Modal -->
+<div class="modal fade" id="deleteComponentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Component</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the component <strong id="delete-component-name"></strong>?</p>
+                <p class="text-danger">This action cannot be undone. Any connections with this component will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form method="post" id="delete-component-form" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Connection Modal -->
+<div class="modal fade" id="addConnectionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Connection</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{% url 'workflow:add_connection' workflow_id=workflow.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="id_source">Source Component</label>
+                        <select name="source" class="form-control" id="id_source" required>
+                            <option value="">--- Select Source Component ---</option>
+                            {% for component in components %}
+                            <option value="{{ component.id }}">{{ component.name }} ({{ component.get_component_type_display }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_target">Target Component</label>
+                        <select name="target" class="form-control" id="id_target" required>
+                            <option value="">--- Select Target Component ---</option>
+                            {% for component in components %}
+                            <option value="{{ component.id }}">{{ component.name }} ({{ component.get_component_type_display }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_connection_type">Connection Type</label>
+                        <select name="connection_type" class="form-control" id="id_connection_type" required>
+                            <option value="">--- Select Connection Type ---</option>
+                            <option value="kafka_to_kafka">Kafka to Kafka Replay</option>
+                            <option value="kafka_to_mq">Kafka to MQ Replay</option>
+                            <option value="mq_to_mq">MQ to MQ Replay</option>
+                            <option value="mq_to_kafka">MQ to Kafka Replay</option>
+                            <option value="db_operation">DB Updates and Queries</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_connection_config">Configuration (JSON)</label>
+                        <textarea name="config" rows="5" class="form-control" id="id_connection_config" placeholder="{}">{}</textarea>
+                        <small class="form-text text-muted">Enter connection configuration in JSON format.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Connection</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Retry Strategy Modal -->
+<div class="modal fade" id="addRetryStrategyModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Retry Strategy</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" id="add-retry-form" action="">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="id_strategy_type">Strategy Type</label>
+                        <select name="strategy_type" class="form-control" id="id_strategy_type" required>
+                            <option value="fixed">Fixed Interval</option>
+                            <option value="exponential">Exponential Backoff</option>
+                            <option value="custom">Custom Strategy</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_max_retries">Max Retries</label>
+                        <input type="number" name="max_retries" class="form-control" id="id_max_retries" min="1" value="3">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_initial_delay_seconds">Initial Delay (seconds)</label>
+                        <input type="number" name="initial_delay_seconds" class="form-control" id="id_initial_delay_seconds" min="1" value="5">
+                    </div>
+                    
+                    <div class="form-group strategy-field" data-strategy-type="exponential">
+                        <label for="id_backoff_factor">Backoff Factor</label>
+                        <input type="number" name="backoff_factor" class="form-control" id="id_backoff_factor" min="1.1" step="0.1" value="2.0">
+                        <small class="form-text text-muted">Each retry will wait (delay * backoff_factor) longer than the previous retry.</small>
+                    </div>
+                    
+                    <div class="form-group strategy-field" data-strategy-type="custom">
+                        <label for="id_custom_strategy">Custom Strategy (YAML)</label>
+                        <textarea name="custom_strategy" rows="5" class="form-control" id="id_custom_strategy"></textarea>
+                        <small class="form-text text-muted">Define a custom retry strategy in YAML format.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Retry Strategy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload YAML Modal -->
+<div class="modal fade" id="uploadYamlModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload YAML Definition</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{% url 'workflow:upload_yaml' workflow_id=workflow.id %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="yaml_file">YAML File</label>
+                        <input type="file" name="yaml_file" class="form-control-file" id="yaml_file" accept=".yaml,.yml" required>
+                        <small class="form-text text-muted">Upload a YAML file with workflow definition.</small>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> Warning: Uploading a new YAML file will overwrite the current workflow configuration.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsPlumb/2.15.6/js/jsplumb.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<script src="{% static 'js/workflow_builder.js' %}"></script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize tab from URL hash if present
+        let hash = window.location.hash;
+        if (hash) {
+            $('.nav-tabs a[href="' + hash + '"]').tab('show');
+        }
+        
+        // Update URL hash on tab change
+        $('.nav-tabs a').on('shown.bs.tab', function(e) {
+            window.location.hash = e.target.hash;
+        });
+        
+        // Edit component modal
+        $('.edit-component').click(function() {
+            const componentId = $(this).data('component-id');
+            $('#edit-component-form').attr('action', '{% url "workflow:edit_component" component_id=999 %}'.replace('999', componentId));
+            
+            // Load component data (would be replaced with AJAX in a real app)
+            {% for component in components %}
+            if ('{{ component.id }}' == componentId) {
+                $('#edit_id_name').val('{{ component.name }}');
+                $('#edit_id_component_type').val('{{ component.component_type }}');
+                $('#edit_id_order').val('{{ component.order }}');
+                $('#edit_id_config').val(JSON.stringify({{ component.config|safe }}, null, 2));
+            }
+            {% endfor %}
+        });
+        
+        // Delete component modal
+        $('.delete-component').click(function() {
+            const componentId = $(this).data('component-id');
+            const componentName = $(this).data('component-name');
+            $('#delete-component-name').text(componentName);
+            $('#delete-component-form').attr('action', '{% url "workflow:delete_component" component_id=999 %}'.replace('999', componentId));
+        });
+        
+        // Add retry strategy modal
+        $('.add-retry').click(function() {
+            const componentId = $(this).data('component-id');
+            $('#add-retry-form').attr('action', '{% url "workflow:add_retry_strategy" component_id=999 %}'.replace('999', componentId));
+        });
+        
+        // Strategy type change handler - show/hide relevant fields
+        $('#id_strategy_type').change(function() {
+            const strategyType = $(this).val();
+            $('.strategy-field').hide();
+            $('.strategy-field[data-strategy-type="' + strategyType + '"]').show();
+        }).trigger('change');
+        
+        // Load YAML content for the YAML tab
+        $('#yaml-tab').on('shown.bs.tab', function() {
+            $.ajax({
+                url: '{% url "workflow:download_yaml" workflow_id=workflow.id %}',
+                dataType: 'text',
+                success: function(data) {
+                    $('#yaml-content').text(data);
+                },
+                error: function() {
+                    $('#yaml-content').text('Error loading YAML definition.');
+                }
+            });
+        });
+        
+        // Connection type validation
+        $('#id_connection_type').change(function() {
+            const sourceType = $('#id_source option:selected').text().includes('Kafka') ? 'kafka' : 
+                              $('#id_source option:selected').text().includes('Message Queue') ? 'mq' : 'other';
+            const targetType = $('#id_target option:selected').text().includes('Kafka') ? 'kafka' : 
+                              $('#id_target option:selected').text().includes('Message Queue') ? 'mq' : 'other';
+            const connectionType = $(this).val();
+            
+            let validConnection = true;
+            let warningMessage = '';
+            
+            // Validate connection type based on source and target
+            if (connectionType === 'kafka_to_kafka' && (sourceType !== 'kafka' || targetType !== 'kafka')) {
+                validConnection = false;
+                warningMessage = 'Kafka to Kafka connections require both source and target to be Kafka components.';
+            } else if (connectionType === 'kafka_to_mq' && (sourceType !== 'kafka' || targetType !== 'mq')) {
+                validConnection = false;
+                warningMessage = 'Kafka to MQ connections require source to be Kafka and target to be Message Queue.';
+            } else if (connectionType === 'mq_to_mq' && (sourceType !== 'mq' || targetType !== 'mq')) {
+                validConnection = false;
+                warningMessage = 'MQ to MQ connections require both source and target to be Message Queue components.';
+            } else if (connectionType === 'mq_to_kafka' && (sourceType !== 'mq' || targetType !== 'kafka')) {
+                validConnection = false;
+                warningMessage = 'MQ to Kafka connections require source to be Message Queue and target to be Kafka.';
+            }
+            
+            // Show/hide warning
+            if (!validConnection && $('#id_source').val() && $('#id_target').val()) {
+                // Show warning if invalid
+                if ($('.connection-warning').length === 0) {
+                    $(this).after('<div class="alert alert-warning mt-2 connection-warning"><i class="fas fa-exclamation-triangle mr-1"></i> ' + warningMessage + '</div>');
+                } else {
+                    $('.connection-warning').text(warningMessage).show();
+                }
+            } else {
+                // Hide warning if valid
+                $('.connection-warning').hide();
+            }
+        });
+        
+        // Source/target change should trigger connection type validation
+        $('#id_source, #id_target').change(function() {
+            $('#id_connection_type').trigger('change');
+        });
+        
+        // Initialize the visual workflow editor when the tab is shown
+        $('#visual-tab').on('shown.bs.tab', function() {
+            initWorkflowDiagram();
+        });
+        
+        // Initialize the visual workflow diagram
+        function initWorkflowDiagram() {
+            const container = document.getElementById('workflow-diagram');
+            
+            // Clear previous diagram
+            container.innerHTML = '';
+            
+            // Exit if no components
+            if (!{{ components|length }}) {
+                container.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="text-center p-4"><i class="fas fa-project-diagram fa-4x text-muted mb-3"></i><h5>No Components</h5><p class="text-muted">Add components and connections to visualize your workflow.</p></div></div>';
+                return;
+            }
+            
+            // Initialize jsPlumb
+            const jsPlumbInstance = jsPlumb.getInstance({
+                Connector: ['Bezier', { curviness: 60 }],
+                Container: container
+            });
+            
+            // Define component data
+            const components = [
+                {% for component in components %}
+                {
+                    id: '{{ component.id }}',
+                    name: '{{ component.name }}',
+                    type: '{{ component.component_type }}',
+                    order: {{ component.order }}
+                },
+                {% endfor %}
+            ];
+            
+            // Define connection data
+            const connections = [
+                {% for connection in connections %}
+                {
+                    id: '{{ connection.id }}',
+                    source: '{{ connection.source.id }}',
+                    target: '{{ connection.target.id }}',
+                    type: '{{ connection.connection_type }}'
+                },
+                {% endfor %}
+            ];
+            
+            // Calculate position based on component order
+            const calculatePosition = (order, total) => {
+                const rows = Math.ceil(Math.sqrt(total));
+                const cols = Math.ceil(total / rows);
+                const row = Math.floor((order - 1) / cols);
+                const col = (order - 1) % cols;
+                return {
+                    left: 150 + col * 200,
+                    top: 100 + row * 150
+                };
+            };
+            
+            // Create component elements
+            components.forEach(component => {
+                const position = calculatePosition(component.order, components.length);
+                
+                // Create component div
+                const componentEl = document.createElement('div');
+                componentEl.id = `component-${component.id}`;
+                componentEl.className = `workflow-component ${component.type}-component`;
+                componentEl.style.left = `${position.left}px`;
+                componentEl.style.top = `${position.top}px`;
+                
+                // Create component header
+                const headerEl = document.createElement('div');
+                headerEl.className = 'component-header';
+                headerEl.innerHTML = `
+                    <span class="component-type">${component.type.toUpperCase()}</span>
+                    <span class="component-drag-handle"><i class="fas fa-arrows-alt"></i></span>
+                `;
+                componentEl.appendChild(headerEl);
+                
+                // Create component body
+                const bodyEl = document.createElement('div');
+                bodyEl.className = 'component-body';
+                bodyEl.innerHTML = `<span class="component-name">${component.name}</span>`;
+                componentEl.appendChild(bodyEl);
+                
+                // Add to container
+                container.appendChild(componentEl);
+                
+                // Make component draggable
+                jsPlumbInstance.draggable(componentEl, {
+                    handle: '.component-drag-handle'
+                });
+                
+                // Add connection endpoints
+                jsPlumbInstance.addEndpoint(componentEl, {
+                    isSource: true,
+                    maxConnections: -1,
+                    anchor: 'Right',
+                    endpoint: ['Dot', { radius: 5 }],
+                    paintStyle: { fill: '#5bc0de' },
+                    connectorStyle: { stroke: '#5bc0de', strokeWidth: 2 },
+                    connectorHoverStyle: { stroke: '#337ab7', strokeWidth: 3 }
+                });
+                
+                jsPlumbInstance.addEndpoint(componentEl, {
+                    isTarget: true,
+                    maxConnections: -1,
+                    anchor: 'Left',
+                    endpoint: ['Dot', { radius: 5 }],
+                    paintStyle: { fill: '#f0ad4e' },
+                    connectorStyle: { stroke: '#5bc0de', strokeWidth: 2 },
+                    connectorHoverStyle: { stroke: '#337ab7', strokeWidth: 3 }
+                });
+            });
+            
+            // Create connections
+            jsPlumbInstance.batch(() => {
+                connections.forEach(connection => {
+                    jsPlumbInstance.connect({
+                        source: `component-${connection.source}`,
+                        target: `component-${connection.target}`,
+                        overlays: [
+                            ['Label', { label: connection.type.replace(/_/g, ' ').toUpperCase(), location: 0.5, cssClass: 'connection-label' }]
+                        ]
+                    });
+                });
+            });
+            
+            // Render when everything is ready
+            jsPlumbInstance.repaintEverything();
+        }
+    });
+</script>
+{% endblock %}
