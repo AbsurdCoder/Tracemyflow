@@ -16,14 +16,16 @@ from .models import (
     WorkflowConnection, 
     RetryStrategy,
     WorkflowExecution,
-    ComponentExecutionStatus
+    ComponentExecutionStatus,
+    SubWorkflowExecution
 )
 from .forms import (
     WorkflowDefinitionForm, 
     WorkflowComponentForm, 
     WorkflowConnectionForm,
     RetryStrategyForm,
-    WorkflowExecutionForm
+    WorkflowExecutionForm,
+    SubWorkflowExecutionForm
 )
 from .services.yaml_generator import WorkflowYAMLGenerator
 from .services.workflow_executor import WorkflowExecutor
@@ -449,3 +451,197 @@ def upload_yaml(request, workflow_id):
         return redirect('workflow:edit', workflow_id=workflow.id)
     
     return redirect('workflow:edit', workflow_id=workflow.id)
+
+
+
+@login_required
+def execute_sub_workflow(request, workflow_id):
+    workflow = get_object_or_404(WorkflowDefinition, pk=workflow_id)
+    
+    # Check if user has permission to execute this workflow
+    if workflow.created_by != request.user:
+        messages.error(request, "You don't have permission to execute this workflow.")
+        return redirect('workflow:list')
+    
+    # Check if workflow has components
+    components = WorkflowComponent.objects.filter(workflow=workflow).order_by('order')
+    if components.count() < 2:
+        messages.error(request, "Workflow must have at least 2 components to execute a sub-workflow.")
+        return redirect('workflow:execute', workflow_id=workflow.id)
+    
+    if request.method == 'POST':
+        form = SubWorkflowExecutionForm(workflow, request.POST)
+        if form.is_valid():
+            start_component = form.cleaned_data['start_component']
+            end_component = form.cleaned_data['end_component']
+            include_start = form.cleaned_data['include_start']
+            include_end = form.cleaned_data['include_end']
+            validation_enabled = form.cleaned_data['validation_enabled']
+            
+            # Create sub-workflow execution record
+            sub_execution = SubWorkflowExecution.objects.create(
+                workflow=workflow,
+                started_by=request.user,
+                validation_enabled=validation_enabled,
+                start_component=start_component,
+                end_component=end_component,
+                include_start=include_start,
+                include_end=include_end
+            )
+            
+            # Execute sub-workflow
+            executor = SubWorkflowExecutor(sub_execution.id)
+            status = executor.execute()
+            
+            messages.success(request, f"Sub-workflow execution completed with status: {status}")
+            return redirect('workflow:sub_execution_detail', sub_execution_id=sub_execution.id)
+        else:
+            messages.error(request, "Error starting sub-workflow execution.")
+    else:
+        form = SubWorkflowExecutionForm(workflow)
+    
+    recent_executions = SubWorkflowExecution.objects.filter(
+        workflow=workflow
+    ).order_by('-started_at')[:5]
+    
+    context = {
+        'workflow': workflow,
+        'components': components,
+        'form': form,
+        'recent_executions': recent_executions,
+    }
+    
+    return render(request, 'workflow/execute_sub_workflow.html', context)
+
+@login_required
+def sub_execution_detail(request, sub_execution_id):
+    sub_execution = get_object_or_404(SubWorkflowExecution, pk=sub_execution_id)
+    workflow = sub_execution.workflow
+    
+    # Check if user has permission to view this execution
+    if sub_execution.started_by != request.user and workflow.created_by != request.user:
+        messages.error(request, "You don't have permission to view this execution.")
+        return redirect('workflow:list')
+    
+    # Get components included in this sub-workflow
+    components = []
+    start_order = sub_execution.start_component.order
+    end_order = sub_execution.end_component.order
+    
+    # Ensure start_order is less than end_order
+    if start_order > end_order:
+        start_order, end_order = end_order, start_order
+    
+    # Adjust range based on include_start and include_end
+    if sub_execution.include_start and sub_execution.include_end:
+        components = WorkflowComponent.objects.filter(
+            workflow=workflow, 
+            order__gte=start_order, 
+            order__lte=end_order
+        ).order_by('order')
+    elif sub_execution.include_start and not sub_execution.include_end:
+        components = WorkflowComponent.objects.filter(
+            workflow=workflow, 
+            order__gte=start_order, 
+            order__lt=end_order
+        ).order_by('order')
+    elif not sub_execution.include_start and sub_execution.include_end:
+        components = WorkflowComponent.objects.filter(
+            workflow=workflow, 
+            order__gt=start_order, 
+            order__lte=end_order
+        ).order_by('order')
+    else:  # not include_start and not include_end
+        components = WorkflowComponent.objects.filter(
+            workflow=workflow, 
+            order__gt=start_order, 
+            order__lt=end_order
+        ).order_by('order')
+    
+    # Get component statuses
+    if sub_execution.parent_execution:
+        component_statuses = ComponentExecutionStatus.objects.filter(
+            workflow_execution=sub_execution.parent_execution,
+            component__in=components
+        ).order_by('component__order')
+    else:
+        component_statuses = ComponentExecutionStatus.objects.filter(
+            component__in=components
+        ).order_by('component__order')
+    
+    context = {
+        'sub_execution': sub_execution,
+        'workflow': workflow,
+        'component_statuses': component_statuses,
+        'components': components,
+    }
+    
+    return render(request, 'workflow/sub_execution_detail.html', context)
+
+@login_required
+def execute_component_in_sub_workflow(request, sub_execution_id, component_id):
+    sub_execution = get_object_or_404(SubWorkflowExecution, pk=sub_execution_id)
+    workflow = sub_execution.workflow
+    
+    # Check if user has permission
+    if sub_execution.started_by != request.user and workflow.created_by != request.user:
+        messages.error(request, "You don't have permission to execute this component.")
+        return redirect('workflow:list')
+    
+    # Only allow executing components if sub-workflow is partially completed or failed
+    if sub_execution.status not in ['partially_completed', 'failed']:
+        messages.error(request, "Cannot execute individual components for sub-workflows that are not partially completed or failed.")
+        return redirect('workflow:sub_execution_detail', sub_execution_id=sub_execution.id)
+    
+    # Check if component is part of this sub-workflow
+    component = get_object_or_404(WorkflowComponent, pk=component_id)
+    start_order = sub_execution.start_component.order
+    end_order = sub_execution.end_component.order
+    
+    # Ensure start_order is less than end_order
+    if start_order > end_order:
+        start_order, end_order = end_order, start_order
+    
+    # Check if component is in the sub-workflow range
+    if (component.order < start_order) or (component.order > end_order):
+        messages.error(request, "Component is not part of this sub-workflow.")
+        return redirect('workflow:sub_execution_detail', sub_execution_id=sub_execution.id)
+    
+    # Execute just this component
+    executor = SubWorkflowExecutor(sub_execution.id)
+    
+    # Create a single component list
+    single_component = [component]
+    
+    # Execute component
+    try:
+        # Get or create component status
+        if sub_execution.parent_execution:
+            component_status, created = ComponentExecutionStatus.objects.get_or_create(
+                workflow_execution=sub_execution.parent_execution,
+                component=component,
+                defaults={'status': 'pending'}
+            )
+        else:
+            component_status, created = ComponentExecutionStatus.objects.get_or_create(
+                component=component,
+                defaults={'status': 'pending'}
+            )
+        
+        # Reset component status
+        component_status.status = 'pending'
+        component_status.started_at = None
+        component_status.completed_at = None
+        component_status.retry_count = 0
+        component_status.error_message = ''
+        component_status.save()
+        
+        # Execute component
+        executor._execute_component(component, component_status)
+        status = component_status.status
+        
+        messages.success(request, f"Component execution completed with status: {status}")
+    except Exception as e:
+        messages.error(request, f"Error executing component: {str(e)}")
+    
+    return redirect('workflow:sub_execution_detail', sub_execution_id=sub_execution.id)

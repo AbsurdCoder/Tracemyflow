@@ -129,3 +129,36 @@ class ComponentExecutionStatus(models.Model):
     
     def __str__(self):
         return f"{self.component.name} - {self.get_status_display()}"
+    
+class SubWorkflowExecution(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('partially_completed', 'Partially Completed'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workflow = models.ForeignKey(WorkflowDefinition, on_delete=models.CASCADE, related_name='sub_executions')
+    started_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sub_workflow_executions')
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    validation_enabled = models.BooleanField(default=True)
+    execution_log = models.TextField(blank=True)
+    
+    # Start and end components define the sub-workflow boundaries
+    start_component = models.ForeignKey(WorkflowComponent, on_delete=models.CASCADE, related_name='sub_workflow_starts')
+    end_component = models.ForeignKey(WorkflowComponent, on_delete=models.CASCADE, related_name='sub_workflow_ends')
+    
+    # Whether to include the start and end components in execution
+    include_start = models.BooleanField(default=True)
+    include_end = models.BooleanField(default=True)
+    
+    # Track parent execution if this is part of a larger execution
+    parent_execution = models.ForeignKey(WorkflowExecution, on_delete=models.CASCADE, 
+                                        related_name='child_executions', null=True, blank=True)
+    
+    def __str__(self):
+        return f"SubWorkflow: {self.workflow.name} ({self.start_component.name} to {self.end_component.name})"

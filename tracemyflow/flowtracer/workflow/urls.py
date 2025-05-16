@@ -32,4 +32,10 @@ urlpatterns = [
     path('execution/<uuid:execution_id>/', views.execution_detail, name='execution_detail'),
     path('execution/<uuid:execution_id>/component/<int:component_id>/execute/', 
          views.execute_component, name='execute_component'),
+
+    # Sub-Workflow management
+    path('<uuid:workflow_id>/execute-sub-workflow/', views.execute_sub_workflow, name='execute_sub_workflow'),
+    path('sub-execution/<uuid:sub_execution_id>/', views.sub_execution_detail, name='sub_execution_detail'),
+    path('sub-execution/<uuid:sub_execution_id>/component/<int:component_id>/execute/', 
+        views.execute_component_in_sub_workflow, name='execute_component_in_sub_workflow'),
 ]
