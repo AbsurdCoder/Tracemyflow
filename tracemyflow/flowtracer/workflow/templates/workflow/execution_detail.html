@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Execution Details - {{ execution.workflow.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Execution Details: {{ execution.workflow.name }}</h3>
+                    <div>
+                        <a href="{% url 'workflow:execute' workflow_id=workflow.id %}" class="btn btn-primary">
+                            <i class="fas fa-play mr-1"></i> New Execution
+                        </a>
+                        <a href="{% url 'workflow:edit' workflow_id=workflow.id %}" class="btn btn-info">
+                            <i class="fas fa-edit mr-1"></i> Edit Workflow
+                        </a>
+                        <a href="{% url 'workflow:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left mr-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Execution Status -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="alert {% if execution.status == 'completed' %}alert-success{% elif execution.status == 'running' %}alert-primary{% elif execution.status == 'failed' %}alert-danger{% elif execution.status == 'partially_completed' %}alert-warning{% else %}alert-secondary{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h4 class="mb-0">
+                                        <i class="fas {% if execution.status == 'completed' %}fa-check-circle{% elif execution.status == 'running' %}fa-spinner fa-spin{% elif execution.status == 'failed' %}fa-times-circle{% elif execution.status == 'partially_completed' %}fa-exclamation-triangle{% else %}fa-clock{% endif %} mr-2"></i>
+                                        Status: {{ execution.get_status_display }}
+                                    </h4>
+                                    <div>
+                                        Started: {{ execution.started_at|date:"M d, Y H:i:s" }}
+                                        {% if execution.completed_at %}
+                                        <br>
+                                        Completed: {{ execution.completed_at|date:"M d, Y H:i:s" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Component Status -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <h4>Component Status</h4>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Order</th>
+                                            <th>Component</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Retries</th>
+                                            <th>Duration</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for status in component_statuses %}
+                                        <tr>
+                                            <td>{{ status.component.order }}</td>
+                                            <td>{{ status.component.name }}</td>
+                                            <td>
+                                                <span class="badge {% if status.component.component_type == 'kafka' %}badge-warning{% elif status.component.component_type == 'mq' %}badge-info{% elif status.component.component_type == 'db' %}badge-success{% elif status.component.component_type == 'service' %}badge-primary{% else %}badge-secondary{% endif %}">
+                                                    {{ status.component.get_component_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if status.status == 'completed' %}badge-success{% elif status.status == 'running' %}badge-primary{% elif status.status == 'failed' %}badge-danger{% elif status.status == 'skipped' %}badge-secondary{% else %}badge-light{% endif %}">
+                                                    {{ status.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if status.retry_count > 0 %}
+                                                <span class="badge badge-warning">{{ status.retry_count }}</span>
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if status.started_at and status.completed_at %}
+                                                {{ status.completed_at|timeuntil:status.started_at }} 
+                                                {% elif status.started_at %}
+                                                Running since {{ status.started_at|date:"H:i:s" }}
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if status.status == 'failed' or execution.status == 'partially_completed' %}
+                                                <form method="post" action="{% url 'workflow:execute_component' execution_id=execution.id component_id=status.component.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-redo-alt mr-1"></i> Retry
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% if status.error_message %}
+                                        <tr class="table-danger">
+                                            <td colspan="7">
+                                                <div class="error-message">
+                                                    <h6 class="mb-1">Error:</h6>
+                                                    <pre class="p-2 bg-light">{{ status.error_message }}</pre>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Execution Log -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h4>Execution Log</h4>
+                            <div class="log-container p-3 bg-light border rounded">
+                                <pre>{{ execution.execution_log }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

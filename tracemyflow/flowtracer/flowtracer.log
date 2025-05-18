@@ -122,3 +122,49 @@ django.template.exceptions.TemplateDoesNotExist: workflow/sub_execution_detail.h
 INFO 2025-05-17 06:52:16,895 autoreload 78420 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py changed, reloading.
 INFO 2025-05-17 06:52:17,078 autoreload 78440 8576208000 Watching for file changes with StatReloader
 WARNING 2025-05-17 07:25:09,600 log 78440 6204469248 Not Found: /workflows/
+INFO 2025-05-18 04:59:48,080 autoreload 9074 8502054016 Watching for file changes with StatReloader
+WARNING 2025-05-18 04:59:51,946 log 9074 6163001344 Not Found: /favicon.ico
+INFO 2025-05-18 05:00:03,827 workflow_executor 9074 6163001344 Starting workflow execution: bye (ID: d277f6cf-e922-4e8e-b3c9-30b6c8c8a0ff)
+INFO 2025-05-18 05:00:03,844 workflow_executor 9074 6163001344 Executing component: hahaha (Type: service)
+INFO 2025-05-18 05:00:03,962 workflow_executor 9074 6163001344 Error executing service component hahaha: No URL specified for HTTP service component hahaha
+INFO 2025-05-18 05:00:03,963 workflow_executor 9074 6163001344 Component execution failed after 0 retries: hahaha, Error: No URL specified for HTTP service component hahaha
+INFO 2025-05-18 05:00:03,963 workflow_executor 9074 6163001344 Workflow execution failed: Component hahaha failed and validation is required
+ERROR 2025-05-18 05:00:03,963 workflow_executor 9074 6163001344 Workflow execution failed: Component hahaha failed and validation is required
+Traceback (most recent call last):
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/services/workflow_executor.py", line 111, in _execute_component
+    self._simulate_service_component(component)
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/services/workflow_executor.py", line 600, in _simulate_service_component
+    raise Exception(f"No URL specified for HTTP service component {component.name}")
+Exception: No URL specified for HTTP service component hahaha
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/services/workflow_executor.py", line 44, in execute
+    self._execute_component(component, component_status)
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/services/workflow_executor.py", line 144, in _execute_component
+    raise Exception(f"Component {component.name} failed and validation is required")
+Exception: Component hahaha failed and validation is required
+ERROR 2025-05-18 05:00:04,004 log 9074 6179827712 Internal Server Error: /workflow/execution/d277f6cf-e922-4e8e-b3c9-30b6c8c8a0ff/
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/contrib/auth/decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py", line 407, in execution_detail
+    return render(request, 'workflow/execution_detail.html', context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/template/loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/template/loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: workflow/execution_detail.html
