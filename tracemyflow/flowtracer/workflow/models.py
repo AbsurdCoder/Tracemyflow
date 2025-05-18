@@ -5,6 +5,9 @@ from django.contrib.auth.models import User
 import uuid
 import os
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class WorkflowDefinition(models.Model):
     VALIDATION_CHOICES = [

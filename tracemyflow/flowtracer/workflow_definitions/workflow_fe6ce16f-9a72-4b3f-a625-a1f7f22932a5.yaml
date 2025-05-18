@@ -1,0 +1,84 @@
+workflow:
+  id: fe6ce16f-9a72-4b3f-a625-a1f7f22932a5
+  name: bye
+  description: ''
+  created_by: tata
+  validation_mode: required
+  components:
+  - id: '3'
+    name: hahaha
+    type: service
+    order: 1
+    config:
+      service_url: http://example-service:8080/api
+      timeout_seconds: 30
+      retry_attempts: 3
+  - id: '4'
+    name: bajjajaj
+    type: api
+    order: 2
+    config:
+      api_url: https://api.example.com/v1
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer TOKEN
+  - id: '5'
+    name: hahahaha
+    type: service
+    order: 3
+    config:
+      service_url: http://example-service:8080/api
+      timeout_seconds: 30
+      retry_attempts: 3
+  - id: '6'
+    name: rahasldkfhdas
+    type: api
+    order: 4
+    config:
+      api_url: https://api.example.com/v1
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer TOKEN
+  connections:
+  - id: '2'
+    type: mq_to_mq
+    source:
+      id: '3'
+      name: hahaha
+    target:
+      id: '4'
+      name: bajjajaj
+    config:
+      source_queue: source-queue
+      target_queue: target-queue
+      message_filter: .*
+      transform_script: ''
+  - id: '3'
+    type: db_operation
+    source:
+      id: '3'
+      name: hahaha
+    target:
+      id: '5'
+      name: hahahaha
+    config:
+      operation_type: query
+      query: SELECT * FROM example_table WHERE condition = :param
+      parameters:
+        param: value
+      timeout_seconds: 30
+  - id: '4'
+    type: mq_to_kafka
+    source:
+      id: '5'
+      name: hahahaha
+    target:
+      id: '6'
+      name: rahasldkfhdas
+    config:
+      source_queue: source-queue
+      target_topic: target-topic
+      message_filter: .*
+      transform_script: ''

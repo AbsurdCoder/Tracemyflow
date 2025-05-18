@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Execute Sub-Workflow - {{ workflow.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Execute Sub-Workflow: {{ workflow.name }}</h3>
+                    <div>
+                        <a href="{% url 'workflow:execute' workflow_id=workflow.id %}" class="btn btn-primary">
+                            <i class="fas fa-play mr-1"></i> Execute Full Workflow
+                        </a>
+                        <a href="{% url 'workflow:edit' workflow_id=workflow.id %}" class="btn btn-info">
+                            <i class="fas fa-edit mr-1"></i> Edit Workflow
+                        </a>
+                        <a href="{% url 'workflow:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left mr-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4>Sub-Workflow Execution</h4>
+                            <p class="text-muted">
+                                Select the start and end components to define the portion of the workflow you want to execute.
+                                This is useful for troubleshooting or replaying specific sections of the workflow.
+                            </p>
+                            
+                            <form method="post" action="{% url 'workflow:execute_sub_workflow' workflow_id=workflow.id %}">
+                                {% csrf_token %}
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.start_component.id_for_label }}">Start Component</label>
+                                            {{ form.start_component }}
+                                            <small class="form-text text-muted">{{ form.start_component.help_text }}</small>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <div class="custom-control custom-checkbox">
+                                                {{ form.include_start }}
+                                                <label class="custom-control-label" for="{{ form.include_start.id_for_label }}">
+                                                    Include Start Component
+                                                </label>
+                                            </div>
+                                            <small class="form-text text-muted">{{ form.include_start.help_text }}</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.end_component.id_for_label }}">End Component</label>
+                                            {{ form.end_component }}
+                                            <small class="form-text text-muted">{{ form.end_component.help_text }}</small>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <div class="custom-control custom-checkbox">
+                                                {{ form.include_end }}
+                                                <label class="custom-control-label" for="{{ form.include_end.id_for_label }}">
+                                                    Include End Component
+                                                </label>
+                                            </div>
+                                            <small class="form-text text-muted">{{ form.include_end.help_text }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        {{ form.validation_enabled }}
+                                        <label class="custom-control-label" for="{{ form.validation_enabled.id_for_label }}">
+                                            Enable Validation
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted">{{ form.validation_enabled.help_text }}</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-play-circle mr-1"></i> Execute Sub-Workflow
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Recent Sub-Workflow Executions</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if recent_executions %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for execution in recent_executions %}
+                                        <li class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>
+                                                    <a href="{% url 'workflow:sub_execution_detail' sub_execution_id=execution.id %}">
+                                                        {{ execution.started_at|date:"M d, Y H:i" }}
+                                                    </a>
+                                                    <br>
+                                                    <small>{{ execution.start_component.name }} to {{ execution.end_component.name }}</small>
+                                                </span>
+                                                <span class="badge {% if execution.status == 'completed' %}badge-success{% elif execution.status == 'running' %}badge-primary{% elif execution.status == 'failed' %}badge-danger{% elif execution.status == 'partially_completed' %}badge-warning{% else %}badge-secondary{% endif %}">
+                                                    {{ execution.get_status_display }}
+                                                </span>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <div class="text-center p-3">
+                                        <p class="text-muted mb-0">No recent sub-workflow executions</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4>Workflow Components</h4>
+                        <div class="workflow-container p-3 border rounded">
+                            <div class="d-flex flex-row flex-nowrap overflow-auto">
+                                {% for component in components %}
+                                <div class="card mx-2" style="min-width: 200px; max-width: 200px;">
+                                    <div class="card-header bg-{% if component.component_type == 'kafka' %}warning{% elif component.component_type == 'mq' %}info{% elif component.component_type == 'db' %}success{% elif component.component_type == 'service' %}primary{% else %}secondary{% endif %} text-white">
+                                        <h6 class="mb-0">{{ component.name }}</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text small">
+                                            Order: {{ component.order }}<br>
+                                            Type: {{ component.get_component_type_display }}
+                                        </p>
+                                        
+                                        {% with retry=component.retry_strategies.first %}
+                                        {% if retry %}
+                                        <div class="mt-2">
+                                            <span class="badge badge-primary">
+                                                {{ retry.get_strategy_type_display }} Retry
+                                            </span>
+                                            <small>(Max: {{ retry.max_retries }})</small>
+                                        </div>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                                {% if not forloop.last %}
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4>How Sub-Workflows Work</h4>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-info-circle text-primary mr-2"></i>What is a Sub-Workflow?</h5>
+                                        <p>
+                                            A sub-workflow allows you to execute only a specific portion of your workflow.
+                                            This is useful for troubleshooting, testing, or replaying specific sections.
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-cogs text-primary mr-2"></i>When to Use It</h5>
+                                        <ul>
+                                            <li>To troubleshoot failures in specific components</li>
+                                            <li>To replay messages between specific points</li>
+                                            <li>To verify specific sections of the workflow</li>
+                                            <li>When a full workflow execution is unnecessary</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-sliders-h text-primary mr-2"></i>Configuration Options</h5>
+                                        <ul>
+                                            <li><strong>Start Component:</strong> Where the sub-workflow begins</li>
+                                            <li><strong>End Component:</strong> Where the sub-workflow ends</li>
+                                            <li><strong>Include Start/End:</strong> Whether to include the boundary components</li>
+                                            <li><strong>Validation:</strong> Enable/disable validation during execution</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-exchange-alt text-primary mr-2"></i>Example Uses</h5>
+                                        <p>
+                                            <strong>Kafka to MQ Replay:</strong> Select a Kafka component as the start and an MQ component as the end to replay messages from Kafka to the message queue.
+                                        </p>
+                                        <p>
+                                            <strong>Service Verification:</strong> Test a specific service by selecting the components before and after it in the workflow.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

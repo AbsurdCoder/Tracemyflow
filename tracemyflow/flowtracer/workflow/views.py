@@ -29,6 +29,11 @@ from .forms import (
 )
 from .services.yaml_generator import WorkflowYAMLGenerator
 from .services.workflow_executor import WorkflowExecutor
+from .services.sub_workflow_executor import SubWorkflowExecutor
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def workflow_list(request):
@@ -312,52 +317,73 @@ def delete_retry_strategy(request, strategy_id):
         generator.save_yaml_to_file()
     
     return redirect('workflow:edit', workflow_id=workflow.id)
+# Update the execute_workflow view function to include recent sub-workflow executions
 
 @login_required
 def execute_workflow(request, workflow_id):
-    workflow = get_object_or_404(WorkflowDefinition, pk=workflow_id)
-    
-    # Check if user has permission to execute this workflow
-    if workflow.created_by != request.user:
-        messages.error(request, "You don't have permission to execute this workflow.")
+    try:
+        workflow = get_object_or_404(WorkflowDefinition, pk=workflow_id)
+        
+        # Check if user has permission to execute this workflow
+        if workflow.created_by != request.user:
+            messages.error(request, "You don't have permission to execute this workflow.")
+            return redirect('workflow:list')
+        
+        if request.method == 'POST':
+            form = WorkflowExecutionForm(request.POST)
+            if form.is_valid():
+                validation_enabled = form.cleaned_data.get('validation_enabled', True)
+                
+                # Create execution record
+                execution = WorkflowExecution.objects.create(
+                    workflow=workflow,
+                    started_by=request.user,
+                    validation_enabled=validation_enabled
+                )
+                
+                # Execute workflow in background (for a real application, use Celery or similar)
+                # For this example, we'll execute it synchronously
+                executor = WorkflowExecutor(execution.id)
+                status = executor.execute()
+                
+                messages.success(request, f"Workflow execution completed with status: {status}")
+                return redirect('workflow:execution_detail', execution_id=execution.id)
+            else:
+                messages.error(request, "Error starting workflow execution.")
+        else:
+            form = WorkflowExecutionForm()
+        
+        # Get components
+        components = WorkflowComponent.objects.filter(workflow=workflow).order_by('order')
+        
+        # Get connections
+        connections = WorkflowConnection.objects.filter(workflow=workflow)
+        
+        # Get recent full workflow executions
+        recent_executions = WorkflowExecution.objects.filter(
+            workflow=workflow
+        ).order_by('-started_at')[:5]
+        
+        # Get recent sub-workflow executions
+        recent_sub_executions = SubWorkflowExecution.objects.filter(
+            workflow=workflow
+        ).order_by('-started_at')[:5]
+        
+        context = {
+            'workflow': workflow,
+            'form': form,
+            'components': components,
+            'connections': connections,
+            'recent_executions': recent_executions,
+            'recent_sub_executions': recent_sub_executions,
+        }
+        
+        return render(request, 'workflow/execute.html', context)
+    except Exception as e:
+        logger.error(f"Error executing workflow: {str(e)}")
+        messages.error(request, f"An error occurred: {str(e)}")
         return redirect('workflow:list')
     
-    if request.method == 'POST':
-        form = WorkflowExecutionForm(request.POST)
-        if form.is_valid():
-            validation_enabled = form.cleaned_data.get('validation_enabled', True)
-            
-            # Create execution record
-            execution = WorkflowExecution.objects.create(
-                workflow=workflow,
-                started_by=request.user,
-                validation_enabled=validation_enabled
-            )
-            
-            # Execute workflow in background (for a real application, use Celery or similar)
-            # For this example, we'll execute it synchronously
-            executor = WorkflowExecutor(execution.id)
-            status = executor.execute()
-            
-            messages.success(request, f"Workflow execution completed with status: {status}")
-            return redirect('workflow:execution_detail', execution_id=execution.id)
-        else:
-            messages.error(request, "Error starting workflow execution.")
-    else:
-        form = WorkflowExecutionForm()
-    
-    recent_executions = WorkflowExecution.objects.filter(
-        workflow=workflow
-    ).order_by('-started_at')[:5]
-    
-    context = {
-        'workflow': workflow,
-        'form': form,
-        'recent_executions': recent_executions,
-    }
-    
-    return render(request, 'workflow/execute.html', context)
-
 @login_required
 def execution_detail(request, execution_id):
     execution = get_object_or_404(WorkflowExecution, pk=execution_id)

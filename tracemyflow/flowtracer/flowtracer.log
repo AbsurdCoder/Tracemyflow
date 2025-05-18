@@ -1,0 +1,124 @@
+INFO 2025-05-17 06:47:32,878 autoreload 78001 8576208000 Watching for file changes with StatReloader
+INFO 2025-05-17 06:48:11,415 autoreload 78001 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/authentication/views.py changed, reloading.
+INFO 2025-05-17 06:48:11,757 autoreload 78072 8576208000 Watching for file changes with StatReloader
+INFO 2025-05-17 06:48:28,011 autoreload 78072 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/models.py changed, reloading.
+INFO 2025-05-17 06:48:28,350 autoreload 78105 8576208000 Watching for file changes with StatReloader
+INFO 2025-05-17 06:48:33,495 autoreload 78105 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/forms.py changed, reloading.
+INFO 2025-05-17 06:48:33,703 autoreload 78123 8576208000 Watching for file changes with StatReloader
+INFO 2025-05-17 06:48:48,939 autoreload 78123 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py changed, reloading.
+INFO 2025-05-17 06:48:49,214 autoreload 78142 8576208000 Watching for file changes with StatReloader
+ERROR 2025-05-17 06:48:59,285 views 78142 6166343680 Error executing workflow: no such table: workflow_subworkflowexecution
+ERROR 2025-05-17 06:49:01,037 views 78142 6166343680 Error executing workflow: no such table: workflow_subworkflowexecution
+ERROR 2025-05-17 06:49:07,117 views 78142 6166343680 Error executing workflow: no such table: workflow_subworkflowexecution
+INFO 2025-05-17 06:49:13,767 autoreload 78142 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py changed, reloading.
+INFO 2025-05-17 06:49:14,032 autoreload 78168 8576208000 Watching for file changes with StatReloader
+ERROR 2025-05-17 06:49:15,470 views 78168 6136803328 Error executing workflow: no such table: workflow_subworkflowexecution
+ERROR 2025-05-17 06:49:23,390 views 78168 6136803328 Error executing workflow: no such table: workflow_subworkflowexecution
+ERROR 2025-05-17 06:49:24,664 views 78168 6136803328 Error executing workflow: no such table: workflow_subworkflowexecution
+INFO 2025-05-17 06:50:02,082 autoreload 78358 8576208000 Watching for file changes with StatReloader
+ERROR 2025-05-17 06:50:29,480 log 78358 6122680320 Internal Server Error: /workflow/fe6ce16f-9a72-4b3f-a625-a1f7f22932a5/execute-sub-workflow/
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/contrib/auth/decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py", line 518, in execute_sub_workflow
+    executor = SubWorkflowExecutor(sub_execution.id)
+               ^^^^^^^^^^^^^^^^^^^
+NameError: name 'SubWorkflowExecutor' is not defined
+INFO 2025-05-17 06:52:05,187 autoreload 78358 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py changed, reloading.
+INFO 2025-05-17 06:52:05,500 autoreload 78420 8576208000 Watching for file changes with StatReloader
+INFO 2025-05-17 06:52:08,782 sub_workflow_executor 78420 6157922304 Starting sub-workflow execution: bye (From: bajjajaj To: bajjajaj)
+INFO 2025-05-17 06:52:08,785 sub_workflow_executor 78420 6157922304 Sub-workflow execution failed: NOT NULL constraint failed: workflow_componentexecutionstatus.workflow_execution_id
+ERROR 2025-05-17 06:52:08,785 sub_workflow_executor 78420 6157922304 Sub-workflow execution failed: NOT NULL constraint failed: workflow_componentexecutionstatus.workflow_execution_id
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.IntegrityError: NOT NULL constraint failed: workflow_componentexecutionstatus.workflow_execution_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/services/sub_workflow_executor.py", line 75, in execute
+    self._initialize_component_statuses()
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/services/sub_workflow_executor.py", line 138, in _initialize_component_statuses
+    ComponentExecutionStatus.objects.create(
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/query.py", line 658, in create
+    obj.save(force_insert=True, using=self.db)
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/base.py", line 814, in save
+    self.save_base(
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/base.py", line 877, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/base.py", line 1020, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/base.py", line 1061, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/query.py", line 1805, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 1822, in execute_sql
+    cursor.execute(sql, params)
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/utils.py", line 84, in _execute
+    with self.db.wrap_database_errors:
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: NOT NULL constraint failed: workflow_componentexecutionstatus.workflow_execution_id
+ERROR 2025-05-17 06:52:08,838 log 78420 6157922304 Internal Server Error: /workflow/sub-execution/35c69c2e-2de1-4f1f-b60b-b457c2ea297f/
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/contrib/auth/decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py", line 605, in sub_execution_detail
+    return render(request, 'workflow/sub_execution_detail.html', context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/template/loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/django/template/loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: workflow/sub_execution_detail.html
+INFO 2025-05-17 06:52:16,895 autoreload 78420 8576208000 /Users/v-dna/Desktop/Project/BPT/tracemyflow/flowtracer/workflow/views.py changed, reloading.
+INFO 2025-05-17 06:52:17,078 autoreload 78440 8576208000 Watching for file changes with StatReloader
+WARNING 2025-05-17 07:25:09,600 log 78440 6204469248 Not Found: /workflows/

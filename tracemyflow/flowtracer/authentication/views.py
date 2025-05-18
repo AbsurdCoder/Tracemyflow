@@ -7,6 +7,8 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import reverse_lazy
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from .models import UserProfile
+import logging
+logger = logging.getLogger(__name__)
 
 class CustomLoginView(LoginView):
     form_class = CustomAuthenticationForm
